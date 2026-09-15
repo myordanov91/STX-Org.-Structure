@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organisation structure</title>
+<style>
+  :root{
+    --canvas:#f5f7fa;
+    --card:#ffffff;
+    --ink:#1b2733;
+    --ink-soft:#5a6b7b;
+    --ink-faint:#8b99a8;
+    --line:#c7d0da;
+    --line-soft:#e3e9ef;
+    --focus:#2563a8;
+    --focus-soft:#e8f0f9;
+    --bar-default:#7a8794;
+    --shadow:0 1px 2px rgba(27,39,51,.06);
+    --shadow-lift:0 6px 18px rgba(27,39,51,.14);
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    color:var(--ink);
+    background:var(--canvas);
+    display:flex;flex-direction:column;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- top bar ---------- */
+  header{
+    background:var(--card);
+    border-bottom:1px solid var(--line-soft);
+    padding:14px 22px;
+    display:flex;flex-wrap:wrap;align-items:center;gap:14px 20px;
+    position:sticky;top:0;z-index:20;
+  }
+  .title-block h1{font-size:18px;font-weight:600;margin:0;letter-spacing:-.01em;}
+  .title-block p{margin:2px 0 0;font-size:12.5px;color:var(--ink-soft);}
+  .spacer{flex:1 1 auto;}
+
+  .search{
+    position:relative;
+  }
+  .search input{
+    font:inherit;font-size:13.5px;
+    padding:8px 12px 8px 32px;width:230px;max-width:46vw;
+    border:1px solid var(--line);border-radius:8px;background:var(--canvas);color:var(--ink);
+  }
+  .search input:focus{outline:2px solid var(--focus);outline-offset:1px;border-color:var(--focus);background:var(--card);}
+  .search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ink-faint);}
+
+  .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .btn{
+    font:inherit;font-size:13px;
+    padding:7px 11px;border:1px solid var(--line);border-radius:8px;
+    background:var(--card);color:var(--ink);cursor:pointer;line-height:1;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn:hover{border-color:var(--ink-faint);}
+  .btn:focus-visible{outline:2px solid var(--focus);outline-offset:1px;}
+  .zoom{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .zoom button{font:inherit;border:0;background:var(--card);cursor:pointer;padding:7px 11px;color:var(--ink);}
+  .zoom button:hover{background:var(--canvas);}
+  .zoom span{padding:0 8px;font-size:12.5px;color:var(--ink-soft);min-width:44px;text-align:center;}
+
+  .switch{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);cursor:pointer;user-select:none;}
+  .switch input{position:absolute;opacity:0;}
+  .track{width:38px;height:22px;border-radius:999px;background:var(--line);position:relative;transition:background .15s;flex:0 0 auto;}
+  .track::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:var(--shadow);transition:transform .15s;}
+  .switch input:checked + .track{background:var(--focus);}
+  .switch input:checked + .track::after{transform:translateX(16px);}
+  .switch input:focus-visible + .track{outline:2px solid var(--focus);outline-offset:2px;}
+
+  /* ---------- legend ---------- */
+  .legend{
+    display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;
+    padding:9px 22px;background:var(--card);border-bottom:1px solid var(--line-soft);
+    font-size:12.5px;color:var(--ink-soft);
+  }
+  .legend .lg{display:inline-flex;align-items:center;gap:7px;}
+  .legend .dot{width:11px;height:11px;border-radius:3px;flex:0 0 auto;}
+
+  /* ---------- canvas ---------- */
+  .canvas{flex:1 1 auto;overflow:auto;padding:40px 40px 80px;}
+  .scaler{transform-origin:top center;transform:scale(var(--scale,1));width:max-content;margin:0 auto;transition:transform .12s ease;}
+
+  /* ---------- tree ---------- */
+  .tree,.tree ul{display:flex;justify-content:center;padding:0;margin:0;list-style:none;}
+  .tree ul{position:relative;padding-top:26px;}
+  .tree li{position:relative;padding:26px 10px 0;text-align:center;}
+  .tree li::before,.tree li::after{
+    content:"";position:absolute;top:0;right:50%;
+    border-top:2px solid var(--line);width:50%;height:26px;
+  }
+  .tree li::after{right:auto;left:50%;border-left:2px solid var(--line);}
+  .tree li::before{border-right:2px solid var(--line);}
+  .tree li:only-child::before,.tree li:only-child::after{display:none;}
+  .tree li:only-child{padding-top:26px;}
+  .tree li:first-child::before,.tree li:last-child::after{border:0 none;}
+  .tree li:last-child::before{border-right:2px solid var(--line);}
+  .tree ul::before{
+    content:"";position:absolute;top:0;left:50%;
+    border-left:2px solid var(--line);width:0;height:26px;
+  }
+  /* roots: no connectors above */
+  .tree.root{padding-top:0;}
+  .tree.root::before{display:none;}
+  .tree.root > li{padding-top:0;}
+  .tree.root > li::before,.tree.root > li::after{display:none;}
+  /* collapsed */
+  li.collapsed > ul{display:none;}
+
+  /* ---------- node card ---------- */
+  .node{
+    position:relative;display:inline-flex;text-align:left;
+    background:var(--card);border:1px solid var(--line-soft);
+    border-radius:var(--radius);box-shadow:var(--shadow);
+    min-width:184px;max-width:212px;overflow:hidden;
+    transition:box-shadow .13s ease, transform .13s ease, border-color .13s;
+  }
+  .node:hover{box-shadow:var(--shadow-lift);transform:translateY(-1px);border-color:var(--line);}
+  .bar{width:5px;flex:0 0 auto;background:var(--bar,var(--bar-default));}
+  .body{padding:11px 13px 12px;flex:1 1 auto;min-width:0;}
+  .node-title{
+    display:block;font-size:14px;font-weight:600;line-height:1.25;color:var(--ink);
+    text-decoration:none;letter-spacing:-.005em;word-break:break-word;
+  }
+  a.node-title:hover{color:var(--focus);text-decoration:underline;}
+  a.node-title:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:3px;}
+  .node-meta{display:flex;align-items:center;gap:7px;margin-top:5px;flex-wrap:wrap;}
+  .node-unit{font-size:11.5px;color:var(--ink-soft);margin-top:2px;line-height:1.3;}
+  .tag{
+    font-size:11px;color:var(--ink-soft);background:var(--canvas);
+    border:1px solid var(--line-soft);border-radius:5px;padding:1px 6px;line-height:1.5;
+  }
+  .team-tag{color:var(--bar,var(--bar-default));border-color:transparent;background:transparent;padding:1px 0;font-weight:600;}
+  .node-salary{
+    margin-top:8px;font-size:13px;font-weight:600;color:var(--ink);
+    font-variant-numeric:tabular-nums;letter-spacing:.005em;
+  }
+  .node-salary .lbl{font-size:10.5px;font-weight:500;color:var(--ink-faint);display:block;margin-bottom:1px;}
+  .node-salary.empty{color:var(--ink-faint);font-weight:500;font-size:12px;}
+  .no-salary .node-salary{display:none;}
+  .node-fw{
+    margin-top:9px;font-size:12px;color:var(--focus);text-decoration:none;
+    display:inline-flex;align-items:center;gap:4px;
+  }
+  .node-fw:hover{text-decoration:underline;}
+  .node-fw:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:3px;}
+  .node-fw.disabled{color:var(--ink-faint);pointer-events:none;}
+  .node-notes{margin-top:7px;font-size:11.5px;color:var(--ink-faint);line-height:1.35;}
+
+  /* collapse toggle */
+  .toggle{
+    position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);
+    z-index:3;font:inherit;font-size:11px;font-weight:600;
+    border:1px solid var(--line);background:var(--card);color:var(--ink-soft);
+    border-radius:999px;height:22px;min-width:22px;padding:0 7px;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:3px;
+    box-shadow:var(--shadow);line-height:1;
+  }
+  .toggle:hover{color:var(--ink);border-color:var(--ink-faint);}
+  .toggle:focus-visible{outline:2px solid var(--focus);outline-offset:1px;}
+  li:not(.collapsed) > .node-wrap .toggle .count{display:none;}
+
+  .node-wrap{position:relative;display:inline-block;}
+
+  /* search dimming + match */
+  .dim .node{opacity:.32;filter:grayscale(.3);}
+  .match .node{border-color:var(--focus);box-shadow:0 0 0 2px var(--focus-soft),var(--shadow);}
+
+  .status{font-size:12.5px;color:var(--ink-soft);padding:0 22px 10px;}
+  .status.warn{color:#9a5b00;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="title-block">
+    <h1>Organisation structure</h1>
+    <p>Sprintax &middot; all-staff view &middot; 116 roles.</p>
+  </div>
+  <div class="spacer"></div>
+  <div class="search">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input id="search" type="search" placeholder="Search role, team or level" aria-label="Search roles">
+  </div>
+  <div class="controls">
+    <button class="btn" id="expandAll">Expand all</button>
+    <button class="btn" id="collapseAll">Collapse all</button>
+    <div class="zoom" role="group" aria-label="Zoom">
+      <button id="zoomOut" aria-label="Zoom out">&minus;</button>
+      <span id="zoomLabel">100%</span>
+      <button id="zoomIn" aria-label="Zoom in">+</button>
+    </div>
+  </div>
+</header>
+
+<div class="legend" id="legend"></div>
+<div class="status" id="status" hidden></div>
+
+<div class="canvas">
+  <div class="scaler" id="scaler">
+    <ul class="tree root" id="tree"></ul>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   DATA  — mirrors the "Roles" tab of the source-of-truth file.
+   These six rows are EXAMPLE data so you can see the chart.
+   Use the "Load data (.xlsx)" button to pull in your real
+   workbook, or send it to me and I regenerate this file.
+   ============================================================ */
+const SHOW_SALARY = false;
+const CONFIG = {
+  currency: "",          // e.g. "€" or "лв " — leave "" for none
+};
+let DATA = [{"id": "R000", "title": "CEO", "team": "Executive", "dept": "Leadership", "unit": "Senior Management", "level": "", "reportsTo": "", "jd": "", "framework": "", "notes": "", "company": "Sprintax"}, {"id": "R001", "title": "Business Operations Manager", "team": "Operations", "dept": "Leadership", "unit": "Senior Management", "level": "M4", "reportsTo": "R000", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Business-Operations-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R002", "title": "Campaings Manager", "team": "Operations", "dept": "Support", "unit": "Marketing", "level": "IC3", "reportsTo": "R001", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Campaings-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R003", "title": "Market Research Specialist", "team": "Operations", "dept": "Support", "unit": "Marketing", "level": "IC2", "reportsTo": "R001", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Market-Research-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R004", "title": "Marketing Support Specialist", "team": "Operations", "dept": "Support", "unit": "Marketing", "level": "IC2", "reportsTo": "R001", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Marketing-Support-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R005", "title": "ZenDesk & Onboarding Specialist", "team": "Operations", "dept": "Support", "unit": "Customer Service", "level": "IC2", "reportsTo": "R001", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/ZenDesk-Onboarding-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R006", "title": "Payments & Operations Supervisor", "team": "Operations", "dept": "Support", "unit": "Payments", "level": "M1", "reportsTo": "R001", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Payments-Operations-Supervisor.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R007", "title": "Payments Specialist", "team": "Operations", "dept": "Support", "unit": "Payments", "level": "IC2", "reportsTo": "R006", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Payments-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R008", "title": "Junior Customer Service Representative", "team": "Operations", "dept": "Client Services", "unit": "Customer Service", "level": "IC1", "reportsTo": "R012", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-Customer-Service-Representative.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R009", "title": "Customer Service Representative", "team": "Operations", "dept": "Client Services", "unit": "Customer Service", "level": "IC2", "reportsTo": "R012", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Customer-Service-Representative.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R010", "title": "Senior Customer Service Representative", "team": "Operations", "dept": "Client Services", "unit": "Customer Service", "level": "IC3", "reportsTo": "R012", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-Customer-Service-Representative.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R011", "title": "Supervisor", "team": "Operations", "dept": "Client Services", "unit": "Customer Service", "level": "IC4", "reportsTo": "R012", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Supervisor.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R012", "title": "Team Leader", "team": "Operations", "dept": "Client Services", "unit": "Customer Service", "level": "M1", "reportsTo": "R013", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Team-Leader.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R013", "title": "Customer Service Manager", "team": "Operations", "dept": "Client Services", "unit": "Customer Service", "level": "M2", "reportsTo": "R001", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Customer-Service-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R014", "title": "Junior Tax Specialist", "team": "Operations", "dept": "Tax Services", "unit": "US Filing", "level": "IC1", "reportsTo": "R018", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-Tax-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R015", "title": "Tax Specialist", "team": "Operations", "dept": "Tax Services", "unit": "US Filing", "level": "IC2", "reportsTo": "R018", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Tax-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R016", "title": "Senior Tax Specialist", "team": "Operations", "dept": "Tax Services", "unit": "US Filing", "level": "IC3", "reportsTo": "R018", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-Tax-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R017", "title": "Supervisor", "team": "Operations", "dept": "Tax Services", "unit": "US Filing", "level": "IC4", "reportsTo": "R018", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Supervisor.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R018", "title": "Team Leader", "team": "Operations", "dept": "Tax Services", "unit": "US Filing", "level": "M1", "reportsTo": "R001", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Team-Leader.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R019", "title": "Junior QA Manual", "team": "Operations", "dept": "Quality", "unit": "Quality Assurance", "level": "IC1", "reportsTo": "R025", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-QA-Manual.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R020", "title": "QA Manual", "team": "Operations", "dept": "Quality", "unit": "Quality Assurance", "level": "IC2", "reportsTo": "R025", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/QA-Manual.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R021", "title": "Senior QA Manual", "team": "Operations", "dept": "Quality", "unit": "Quality Assurance", "level": "IC3", "reportsTo": "R025", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-QA-Manual.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R022", "title": "Junior QA Automation Engineer", "team": "Operations", "dept": "Quality", "unit": "Quality Assurance", "level": "IC2", "reportsTo": "R025", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-QA-Automation-Engineer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R023", "title": "QA Automation Engineer", "team": "Operations", "dept": "Quality", "unit": "Quality Assurance", "level": "IC3", "reportsTo": "R025", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/QA-Automation-Engineer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R024", "title": "Senior QA Automation Engineer", "team": "Operations", "dept": "Quality", "unit": "Quality Assurance", "level": "IC4", "reportsTo": "R025", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-QA-Automation-Engineer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R025", "title": "Team Leader", "team": "Operations", "dept": "Quality", "unit": "Quality Assurance", "level": "M1", "reportsTo": "R026", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Team-Leader.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R026", "title": "Head of Quality", "team": "Operations", "dept": "Quality", "unit": "Quality Assurance", "level": "M3", "reportsTo": "R001", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Head-of-Quality.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R027", "title": "Business Analyst (Tax SME)", "team": "Operations", "dept": "Tax Services", "unit": "Business Analysis", "level": "IC4", "reportsTo": "R001", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Business-Analyst-Tax-SME.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R028", "title": "Senior Business Analyst (Tax SME)", "team": "Operations", "dept": "Tax Services", "unit": "Business Analysis", "level": "IC5", "reportsTo": "R001", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-Business-Analyst-Tax-SME.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R029", "title": "Junior Tax Expert", "team": "Operations", "dept": "Tax Services", "unit": "US Tax and Payroll", "level": "IC1", "reportsTo": "R040", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-Tax-Expert.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R030", "title": "Tax Expert", "team": "Operations", "dept": "Tax Services", "unit": "US Tax and Payroll", "level": "IC2", "reportsTo": "R040", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Tax-Expert.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R031", "title": "Senior Tax Expert", "team": "Operations", "dept": "Tax Services", "unit": "US Tax and Payroll", "level": "IC3", "reportsTo": "R040", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-Tax-Expert.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R032", "title": "Junior Tax Specialist", "team": "Operations", "dept": "Tax Services", "unit": "US Tax and Payroll", "level": "IC1", "reportsTo": "R040", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-Tax-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R033", "title": "Tax Specialist", "team": "Operations", "dept": "Tax Services", "unit": "US Tax and Payroll", "level": "IC2", "reportsTo": "R040", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Tax-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R034", "title": "Senior Tax Specialist", "team": "Operations", "dept": "Tax Services", "unit": "US Tax and Payroll", "level": "IC3", "reportsTo": "R040", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-Tax-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R035", "title": "Junior Technical Support", "team": "Operations", "dept": "Technical", "unit": "Technnical Support", "level": "IC1", "reportsTo": "R039", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-Technical-Support.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R036", "title": "Technical Support", "team": "Operations", "dept": "Client Services", "unit": "Technnical Support", "level": "IC2", "reportsTo": "R039", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Technical-Support.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R037", "title": "Senior Technical Support", "team": "Operations", "dept": "Client Services", "unit": "Technnical Support", "level": "IC3", "reportsTo": "R039", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-Technical-Support.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R038", "title": "Supervisor", "team": "Operations", "dept": "Client Services", "unit": "Technnical Support", "level": "IC4", "reportsTo": "R039", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Supervisor.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R039", "title": "Team Leader", "team": "Operations", "dept": "Client Services", "unit": "Technnical Support", "level": "M1", "reportsTo": "R040", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Team-Leader.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R040", "title": "Tax Product Manager", "team": "Operations", "dept": "Tax Services", "unit": "Management", "level": "M2", "reportsTo": "R001", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Tax-Product-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R041", "title": "Junior Tax Specialist", "team": "Operations", "dept": "Tax Services", "unit": "International Tax", "level": "IC1", "reportsTo": "R040", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-Tax-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R042", "title": "Tax Product Manager", "team": "Operations", "dept": "Tax Services", "unit": "Management", "level": "M2", "reportsTo": "R001", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Tax-Product-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R043", "title": "Product Development Manager", "team": "Operations", "dept": "Tax Services", "unit": "International Tax", "level": "M1", "reportsTo": "R001", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Product-Development-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Taxback"}, {"id": "R044", "title": "Tax Specialist", "team": "Operations", "dept": "Tax Services", "unit": "International Tax", "level": "IC2", "reportsTo": "R040", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Tax-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R045", "title": "Senior Tax Specialist", "team": "Operations", "dept": "Tax Services", "unit": "International Tax", "level": "IC3", "reportsTo": "R040", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-Tax-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R046", "title": "Customer Service Representative", "team": "Operations", "dept": "Client Services", "unit": "International Tax", "level": "IC2", "reportsTo": "R040", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Customer-Service-Representative.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Taxback"}, {"id": "R047", "title": "Junior Tax Specialist", "team": "Operations", "dept": "Tax Services", "unit": "International Tax", "level": "IC1", "reportsTo": "R040", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-Tax-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Taxback"}, {"id": "R048", "title": "Tax Specialist", "team": "Operations", "dept": "Tax Services", "unit": "International Tax", "level": "IC2", "reportsTo": "R040", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Tax-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Taxback"}, {"id": "R049", "title": "Senior Tax Specialist", "team": "Operations", "dept": "Tax Services", "unit": "International Tax", "level": "IC3", "reportsTo": "R040", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-Tax-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Taxback"}, {"id": "R050", "title": "Customer Success Executive", "team": "Operations", "dept": "Support", "unit": "International Tax", "level": "IC2", "reportsTo": "R001", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Customer-Success-Executive.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Taxback"}, {"id": "R051", "title": "Employee Experience Specialist", "team": "HR", "dept": "People & Culture", "unit": "Employee Experience", "level": "IC2", "reportsTo": "R001", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Employee-Experience-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/HR_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R052", "title": "Chief Product Officer", "team": "TECH", "dept": "Product", "unit": "Senior Management", "level": "D6", "reportsTo": "R000", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Chief-Product-Officer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R053", "title": "Chief Technical Officer", "team": "TECH", "dept": "Leadership", "unit": "Senior Management", "level": "M4", "reportsTo": "R052", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Chief-Technical-Officer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R054", "title": "Data Science Lead Engineer", "team": "Operations", "dept": "Data Science", "unit": "Data Science", "level": "M2", "reportsTo": "R001", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Data-Science-Lead-Engineer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R055", "title": "Senior Data and Reporting Analyst", "team": "Operations", "dept": "Data Science", "unit": "Analytics", "level": "IC3", "reportsTo": "R054", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-Data-and-Reporting-Analyst.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R056", "title": "Data and Reporting Analyst", "team": "Operations", "dept": "Data Science", "unit": "Analytics", "level": "IC2", "reportsTo": "R054", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Data-and-Reporting-Analyst.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R057", "title": "Junior Data and Reporting Analyst", "team": "Operations", "dept": "Data Science", "unit": "Analytics", "level": "IC1", "reportsTo": "R054", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-Data-and-Reporting-Analyst.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R058", "title": "Systems Suport Specialist", "team": "Operations", "dept": "Data Science", "unit": "Analytics", "level": "IC2", "reportsTo": "R054", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Systems-Suport-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Operations_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R059", "title": "Product Manager", "team": "TECH", "dept": "Product", "unit": "Product Management", "level": "IC4", "reportsTo": "R052", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Product-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R060", "title": "Technical Project Manager", "team": "TECH", "dept": "Product", "unit": "Delivery Management", "level": "IC4", "reportsTo": "R052", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Technical-Project-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R061", "title": "Senior Product Owner", "team": "TECH", "dept": "Product", "unit": "Delivery Management", "level": "IC4", "reportsTo": "R052", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-Product-Owner.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R062", "title": "Product Owner", "team": "TECH", "dept": "Product", "unit": "Delivery Management", "level": "IC3", "reportsTo": "R052", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Product-Owner.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R063", "title": "Junior Product Owner", "team": "TECH", "dept": "Product", "unit": "Delivery Management", "level": "IC2", "reportsTo": "R052", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-Product-Owner.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R064", "title": "Program Manager", "team": "TECH", "dept": "Product", "unit": "Delivery Management", "level": "IC4", "reportsTo": "R052", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Program-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R065", "title": "Senior Project Manager", "team": "TECH", "dept": "Product", "unit": "Delivery Management", "level": "IC3", "reportsTo": "R052", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-Project-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R066", "title": "Project Manager", "team": "TECH", "dept": "Product", "unit": "Delivery Management", "level": "IC2", "reportsTo": "R052", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Project-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R067", "title": "Junior Project Manager", "team": "TECH", "dept": "Product", "unit": "Delivery Management", "level": "IC1", "reportsTo": "R052", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-Project-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R068", "title": "Junior UX Designer", "team": "TECH", "dept": "Design", "unit": "Design", "level": "IC1", "reportsTo": "R052", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-UX-Designer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R069", "title": "UX Designer", "team": "TECH", "dept": "Design", "unit": "Design", "level": "IC2", "reportsTo": "R052", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/UX-Designer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R070", "title": "Senior UX Designer", "team": "TECH", "dept": "Design", "unit": "Design", "level": "IC3", "reportsTo": "R052", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-UX-Designer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R071", "title": "Junior PHP Developer", "team": "TECH", "dept": "Development", "unit": "PHP", "level": "IC1", "reportsTo": "R074", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-PHP-Developer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R072", "title": "PHP Developer", "team": "TECH", "dept": "Development", "unit": "PHP", "level": "IC2", "reportsTo": "R074", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/PHP-Developer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R073", "title": "Senior PHP Developer", "team": "TECH", "dept": "Development", "unit": "PHP", "level": "IC3", "reportsTo": "R074", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-PHP-Developer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R074", "title": "Team Leader", "team": "TECH", "dept": "Development", "unit": "PHP", "level": "M2", "reportsTo": "R053", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Team-Leader.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R075", "title": "Junior .NET Developer", "team": "TECH", "dept": "Development", "unit": ".NET", "level": "IC1", "reportsTo": "R079", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-NET-Developer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R076", "title": ".NET Developer", "team": "TECH", "dept": "Development", "unit": ".NET", "level": "IC2", "reportsTo": "R079", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/NET-Developer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R077", "title": "Senior .NET Developer", "team": "TECH", "dept": "Development", "unit": ".NET", "level": "IC3", "reportsTo": "R079", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-NET-Developer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R078", "title": "Technical Architect", "team": "TECH", "dept": "Development", "unit": ".NET", "level": "IC4", "reportsTo": "R053", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Technical-Architect.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R079", "title": "Team Leader", "team": "TECH", "dept": "Development", "unit": ".NET", "level": "M2", "reportsTo": "R053", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Team-Leader.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R080", "title": "Junior Frontend Developer", "team": "TECH", "dept": "Development", "unit": "Frontend", "level": "IC1", "reportsTo": "R083", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-Frontend-Developer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R081", "title": "Frontend Developer", "team": "TECH", "dept": "Development", "unit": "Frontend", "level": "IC2", "reportsTo": "R083", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Frontend-Developer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R082", "title": "Senior Frontend Developer", "team": "TECH", "dept": "Development", "unit": "Frontend", "level": "IC3", "reportsTo": "R083", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-Frontend-Developer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R083", "title": "Team Leader", "team": "TECH", "dept": "Development", "unit": "Frontend", "level": "M1", "reportsTo": "R053", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Team-Leader.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R084", "title": "Senior AWS Engineer", "team": "TECH", "dept": "Cloud Operations", "unit": "AWS", "level": "IC4", "reportsTo": "R053", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-AWS-Engineer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R085", "title": "DevOps AWS Engineer", "team": "TECH", "dept": "Cloud Operations", "unit": "AWS", "level": "IC3", "reportsTo": "R053", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/DevOps-AWS-Engineer.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R086", "title": "Junior DevOps AWS", "team": "TECH", "dept": "Cloud Operations", "unit": "AWS", "level": "IC2", "reportsTo": "R053", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Junior-DevOps-AWS.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/TECH_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R087", "title": "Vice President", "team": "Commercial", "dept": "Leadership", "unit": "Senior Management", "level": "", "reportsTo": "R000", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Vice-President.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Commercial_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R088", "title": "Vice President, Calculus", "team": "Commercial", "dept": "Leadership", "unit": "Strategy", "level": "", "reportsTo": "R000", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Vice-President-Calculus.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Commercial_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R089", "title": "Vice President, Dividents", "team": "Commercial", "dept": "Leadership", "unit": "Strategy", "level": "", "reportsTo": "R000", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Vice-President-Dividents.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Commercial_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R090", "title": "SVP of Client Services", "team": "Commercial", "dept": "Client Services", "unit": "Client Services", "level": "", "reportsTo": "R087", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/SVP-of-Client-Services.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Commercial_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R091", "title": "Client Success Manager", "team": "Commercial", "dept": "Client Services", "unit": "Client Services", "level": "", "reportsTo": "R087", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Client-Success-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Commercial_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R092", "title": "Head Of Educational Sales", "team": "Commercial", "dept": "Sales", "unit": "Educational Sales", "level": "", "reportsTo": "R087", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Head-Of-Educational-Sales.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Commercial_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R093", "title": "Onboarding Specialist", "team": "Commercial", "dept": "Sales", "unit": "Educational Sales", "level": "", "reportsTo": "R087", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Onboarding-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Commercial_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R094", "title": "Business Development Executive", "team": "Commercial", "dept": "Business Development", "unit": "Educational Sales", "level": "", "reportsTo": "R087", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Business-Development-Executive.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Commercial_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R095", "title": "Customer Success Executive", "team": "Commercial", "dept": "Client Services", "unit": "Educational Sales", "level": "", "reportsTo": "R087", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Customer-Success-Executive.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Commercial_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R096", "title": "Sales Executive", "team": "Commercial", "dept": "Sales", "unit": "Educational Sales", "level": "", "reportsTo": "R087", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Sales-Executive.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Commercial_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R097", "title": "Business Development Manager", "team": "Commercial", "dept": "Business Development", "unit": "Business Development", "level": "", "reportsTo": "R087", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Business-Development-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Commercial_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R098", "title": "Business Development Executive", "team": "Commercial", "dept": "Business Development", "unit": "J Market", "level": "", "reportsTo": "R087", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Business-Development-Executive.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Commercial_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R099", "title": "Head of Custody Tax", "team": "Commercial", "dept": "Client Services", "unit": "Customer Success", "level": "", "reportsTo": "R087", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Head-of-Custody-Tax.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Commercial_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R100", "title": "Financial Controller", "team": "Finance", "dept": "Leadership", "unit": "Senior Management", "level": "", "reportsTo": "R000", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Financial-Controller.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Finance_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R101", "title": "Financial Accountant", "team": "Finance", "dept": "Accounting", "unit": "Accounting", "level": "", "reportsTo": "R100", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Financial-Accountant.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Finance_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R102", "title": "Accounts Assistant", "team": "Finance", "dept": "Accounting", "unit": "Accounting", "level": "", "reportsTo": "R100", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Accounts-Assistant.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Finance_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R103", "title": "Head Of Marketing", "team": "Marketing", "dept": "Leadership", "unit": "Senior Management", "level": "", "reportsTo": "R000", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Head-Of-Marketing.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Marketing_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R104", "title": "SEO Manager", "team": "Marketing", "dept": "Performance", "unit": "SEO", "level": "", "reportsTo": "R103", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/SEO-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Marketing_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R105", "title": "Senior SEO Specialist", "team": "Marketing", "dept": "Performance", "unit": "SEO", "level": "", "reportsTo": "R103", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-SEO-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Marketing_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R106", "title": "SEO Specialist", "team": "Marketing", "dept": "Performance", "unit": "SEO", "level": "", "reportsTo": "R103", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/SEO-Specialist.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Marketing_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R107", "title": "SEO Intern", "team": "Marketing", "dept": "Performance", "unit": "SEO", "level": "", "reportsTo": "R103", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/SEO-Intern.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Marketing_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R108", "title": "Marketing Manager", "team": "Marketing", "dept": "Marketing Generalists", "unit": "Account Management", "level": "", "reportsTo": "R103", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Marketing-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Marketing_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R109", "title": "Content Executive", "team": "Marketing", "dept": "Content & Brand", "unit": "Content Marketing", "level": "", "reportsTo": "R103", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Content-Executive.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Marketing_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R110", "title": "Content Manager", "team": "Marketing", "dept": "Content & Brand", "unit": "Content Marketing", "level": "", "reportsTo": "R103", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Content-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Marketing_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R111", "title": "SEM Manager", "team": "Marketing", "dept": "Performance", "unit": "Ad Operations", "level": "", "reportsTo": "R103", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/SEM-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Marketing_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R112", "title": "Ad Operations Manager", "team": "Marketing", "dept": "Performance", "unit": "Ad Operations", "level": "", "reportsTo": "R103", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Ad-Operations-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Marketing_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R113", "title": "Social Media Manager", "team": "Marketing", "dept": "Performance", "unit": "Ad Operations", "level": "", "reportsTo": "R103", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Social-Media-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Marketing_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R114", "title": "Digital Marketing Executive", "team": "Marketing", "dept": "Marketing Generalists", "unit": "Account Management", "level": "", "reportsTo": "R103", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Digital-Marketing-Executive.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Marketing_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}, {"id": "R115", "title": "Senior Account Manager", "team": "Marketing", "dept": "Marketing Generalists", "unit": "Account Management", "level": "", "reportsTo": "R103", "jd": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/JDs/Senior-Account-Manager.docx", "framework": "https://yourtenant.sharepoint.com/sites/HR/Shared%20Documents/Frameworks/Marketing_Career_Framework.xlsx", "notes": "", "company": "Sprintax"}];
+
+/* named colours for known teams; anything else auto-assigns from PALETTE */
+const TEAM_COLORS = {
+  "Executive":"#3b3b6d",
+  "Operations":"#1e7f8e",
+  "TECH":"#6d5bb5",
+  "Commercial":"#b9770e",
+  "Marketing":"#8e3b5c",
+  "Finance":"#4a7c3f",
+  "HR":"#0f6e8c",
+};
+const PALETTE = ["#2f6f6f","#7a5aa0","#a1662f","#3f6b9c","#8a5a3c","#5a7a3c","#9c3f6b","#3c6b8a"];
+const teamColorCache = {};
+let paletteIdx = 0;
+function teamColor(team){
+  if(!team) return "var(--bar-default)";
+  if(TEAM_COLORS[team]) return TEAM_COLORS[team];
+  if(!teamColorCache[team]){ teamColorCache[team] = PALETTE[paletteIdx % PALETTE.length]; paletteIdx++; }
+  return teamColorCache[team];
+}
+
+/* ---------- helpers ---------- */
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = n => (n===""||n==null||isNaN(n)) ? null : Number(n);
+const fmtMoney = n => CONFIG.currency + Number(n).toLocaleString("en-US");
+function salaryText(r){
+  const a=num(r.salaryMin), b=num(r.salaryMax);
+  if(a==null && b==null) return {empty:true, text:"Band to be set"};
+  if(a!=null && b!=null) return {empty:false, text:`${fmtMoney(a)}\u2013${fmtMoney(b)}`};
+  return {empty:false, text: fmtMoney(a!=null?a:b)};
+}
+const isRealLink = u => u && /^https?:\/\//i.test(u);
+
+/* ---------- build tree model ---------- */
+function buildForest(rows){
+  const byId={}; rows.forEach(r=>byId[r.id]=Object.assign({children:[]},r));
+  const roots=[];
+  rows.forEach(r=>{
+    const parent = r.reportsTo && byId[r.reportsTo];
+    if(parent && parent.id!==r.id) parent.children.push(byId[r.id]);
+    else roots.push(byId[r.id]);
+  });
+  return roots;
+}
+
+/* ---------- render ---------- */
+function nodeHTML(n){
+  const color = teamColor(n.team);
+  const sal = salaryText(n);
+  const titleInner = isRealLink(n.jd)
+    ? `<a class="node-title" href="${esc(n.jd)}" target="_blank" rel="noopener" title="Open job description">${esc(n.title)}</a>`
+    : `<span class="node-title" title="No job description linked">${esc(n.title)}</span>`;
+  const fw = isRealLink(n.framework)
+    ? `<a class="node-fw" href="${esc(n.framework)}" target="_blank" rel="noopener">Career framework
+         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg></a>`
+    : `<span class="node-fw disabled">No framework linked</span>`;
+  const meta = [];
+  if(n.team)  meta.push(`<span class="team-tag" style="color:${color}">${esc(n.team)}</span>`);
+  if(n.level) meta.push(`<span class="tag">${esc(n.level)}</span>`);
+  if(n.dept && n.dept!==n.team) meta.push(`<span class="tag">${esc(n.dept)}</span>`);
+  const salClass = sal.empty ? "node-salary empty" : "node-salary";
+  const salInner = sal.empty ? esc(sal.text) : `<span class="lbl">Salary band</span>${esc(sal.text)}`;
+  const salaryBlock = SHOW_SALARY ? `<div class="${salClass}">${salInner}</div>` : "";
+  const notes = n.notes ? `<div class="node-notes">${esc(n.notes)}</div>` : "";
+  return `<div class="node" style="--bar:${color}" data-search="${esc((n.title+' '+n.team+' '+(n.dept||'')+' '+(n.unit||'')+' '+n.level+' '+(n.company||'')+' '+(n.notes||'')).toLowerCase())}">
+      <span class="bar"></span>
+      <div class="body">
+        ${titleInner}
+        ${n.unit ? `<div class="node-unit">${esc(n.unit)}</div>` : ""}
+        <div class="node-meta">${meta.join("")}</div>
+        ${salaryBlock}
+        ${fw}
+        ${notes}
+      </div>
+    </div>`;
+}
+function liHTML(n){
+  const kids = n.children.length;
+  const toggle = kids ? `<button class="toggle" aria-expanded="true" aria-label="Collapse ${esc(n.title)}"><span class="sign">&minus;</span><span class="count">${kids}</span></button>` : "";
+  const childUl = kids ? `<ul>${n.children.map(liHTML).join("")}</ul>` : "";
+  return `<li class="${kids?'has-children':''}">
+      <div class="node-wrap">${nodeHTML(n)}${toggle}</div>
+      ${childUl}
+    </li>`;
+}
+function render(){
+  const roots = buildForest(DATA);
+  document.getElementById("tree").innerHTML = roots.map(liHTML).join("");
+  buildLegend();
+  wireToggles();
+  applyZoom();
+}
+
+/* ---------- legend ---------- */
+function buildLegend(){
+  const teams=[]; DATA.forEach(r=>{ if(r.team && !teams.includes(r.team)) teams.push(r.team); });
+  document.getElementById("legend").innerHTML = teams.map(t=>
+    `<span class="lg"><span class="dot" style="background:${teamColor(t)}"></span>${esc(t)}</span>`).join("");
+}
+
+/* ---------- collapse / expand ---------- */
+function wireToggles(){
+  document.querySelectorAll(".toggle").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const li = btn.closest("li");
+      const collapsed = li.classList.toggle("collapsed");
+      btn.setAttribute("aria-expanded", String(!collapsed));
+      btn.querySelector(".sign").innerHTML = collapsed ? "+" : "&minus;";
+    });
+  });
+}
+function setAll(collapsed){
+  document.querySelectorAll("li.has-children").forEach(li=>{
+    // never collapse the very top so the chart never vanishes
+    const isRoot = li.parentElement.classList.contains("root");
+    if(isRoot && collapsed) return;
+    li.classList.toggle("collapsed", collapsed);
+    const btn=li.querySelector(":scope > .node-wrap > .toggle");
+    if(btn){ btn.setAttribute("aria-expanded", String(!collapsed)); btn.querySelector(".sign").innerHTML = collapsed?"+":"&minus;"; }
+  });
+}
+document.getElementById("expandAll").onclick = ()=>setAll(false);
+document.getElementById("collapseAll").onclick = ()=>setAll(true);
+
+/* ---------- zoom ---------- */
+let scale=1;
+function applyZoom(){
+  document.getElementById("scaler").style.setProperty("--scale", scale);
+  document.getElementById("zoomLabel").textContent = Math.round(scale*100)+"%";
+}
+document.getElementById("zoomIn").onclick  = ()=>{ scale=Math.min(1.6, +(scale+0.1).toFixed(2)); applyZoom(); };
+document.getElementById("zoomOut").onclick = ()=>{ scale=Math.max(0.4, +(scale-0.1).toFixed(2)); applyZoom(); };
+
+/* ---------- hide salaries ---------- */
+// salary view disabled in all-staff build
+
+/* ---------- search ---------- */
+const searchEl = document.getElementById("search");
+searchEl.addEventListener("input", ()=>{
+  const q = searchEl.value.trim().toLowerCase();
+  const items = document.querySelectorAll("#tree li");
+  if(!q){ items.forEach(li=>li.classList.remove("dim","match")); return; }
+  setAll(false); // reveal everything so matches aren't hidden inside collapsed branches
+  items.forEach(li=>{
+    const node = li.querySelector(":scope > .node-wrap > .node");
+    const hit = node && node.dataset.search.includes(q);
+    li.classList.toggle("match", !!hit);
+    li.classList.toggle("dim", !hit);
+  });
+  // undim ancestors of any match so the path stays readable
+  document.querySelectorAll("#tree li.match").forEach(li=>{
+    let p=li.parentElement.closest("li");
+    while(p){ p.classList.remove("dim"); p=p.parentElement.closest("li"); }
+  });
+});
+
+/* ---------- load .xlsx ---------- */
+const status = document.getElementById("status");
+function showStatus(msg, warn){ status.hidden=false; status.textContent=msg; status.classList.toggle("warn", !!warn); }
+const HEADERS = {
+  id:"Role ID", title:"Job Title", team:"Function", dept:"Department", unit:"Unit", level:"Level",
+  reportsTo:"Reports To (Role ID)", salaryMin:"Salary Min", salaryMax:"Salary Max",
+  jd:"JD Link", framework:"Career Framework Link", company:"Company", notes:"Notes"
+};
+var _lb=document.getElementById("loadBtn"); if(_lb) _lb.onclick = ()=>{
+  if(typeof XLSX === "undefined"){
+    showStatus("Loading data from a file needs an internet connection. The chart above works offline with its built-in data — reconnect to import, or ask for a refreshed file.", true);
+    return;
+  }
+  document.getElementById("fileInput").click();
+};
+var _fi=document.getElementById("fileInput"); if(_fi) _fi.addEventListener("change", e=>{
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    try{
+      const wb = XLSX.read(ev.target.result, {type:"array"});
+      const ws = wb.Sheets["Roles"];
+      if(!ws){ showStatus('No "Roles" sheet found in that workbook. Use the source-of-truth file.', true); return; }
+      const rows = XLSX.utils.sheet_to_json(ws, {range:2, defval:""}); // headers on row 3
+      const mapped = rows
+        .map(r=>({
+          id:String(r[HEADERS.id]).trim(), title:String(r[HEADERS.title]).trim(),
+          team:String(r[HEADERS.team]).trim(), dept:String(r[HEADERS.dept]||"").trim(),
+          unit:String(r[HEADERS.unit]||"").trim(), level:String(r[HEADERS.level]).trim(),
+          reportsTo:String(r[HEADERS.reportsTo]).trim(),
+          salaryMin:r[HEADERS.salaryMin], salaryMax:r[HEADERS.salaryMax],
+          jd:String(r[HEADERS.jd]||"").trim(), framework:String(r[HEADERS.framework]||"").trim(),
+          company:String(r[HEADERS.company]||"").trim(),
+          notes:String(r[HEADERS.notes]||"").trim()
+        }))
+        .filter(r=>r.id && r.title);
+      if(!mapped.length){ showStatus("No roles found — check that Role ID and Job Title are filled in.", true); return; }
+      DATA = mapped; render();
+      showStatus(`Loaded ${mapped.length} roles from ${file.name}.`, false);
+    }catch(err){
+      showStatus("Couldn't read that file. Make sure it's the .xlsx source-of-truth workbook.", true);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value="";
+});
+
+render();
+</script>
+
+</body>
+</html>
