@@ -97,6 +97,10 @@
   /* company view: keep all function cards on one row (auto-fit zoom shrinks to fit) */
   .company-fan{width:max-content;max-width:none;margin-left:auto;margin-right:auto}
   .stx-fan-grid.one-row{flex-wrap:nowrap;max-width:none}
+  /* one-row rail: run from first card's centre to last card's centre, not the full row width
+     (cards are 186px wide, so inset half a card — 93px — at each end so it meets the outer drops) */
+  .stx-fan-grid.one-row:not(.single){border-top:0}
+  .stx-fan-grid.one-row:not(.single)::before{content:'';position:absolute;top:0;left:93px;right:93px;height:var(--conn);background:var(--line)}
   .stx-fan-grid>.item{position:relative}
   .stx-fan-grid:not(.single)>.item::before{content:'';position:absolute;top:-24px;left:50%;transform:translateX(-50%);width:var(--conn);height:24px;background:var(--line)}
 
@@ -197,6 +201,12 @@
   .pcard.mgr .rl,.pcard.pbox .rl{color:#fff;opacity:.92}
   .pcard.mgr .lo,.pcard.pbox .lo{color:#fff;opacity:.82}
   .chain-link{width:0;height:16px;border-left:2px solid var(--line);margin:0 auto}
+  /* Chief of Staff — staff role branching off the CEO stem (not a line manager of the functions) */
+  .cos-region{position:relative;width:var(--conn);height:104px;background:var(--line);margin:0 auto}
+  .cos-branch{position:absolute;top:50%;left:var(--conn);transform:translateY(-50%);display:flex;align-items:center}
+  .cos-arm{width:52px;height:var(--conn);background:var(--line);flex:0 0 auto}
+  .stx-apex.cos-card{min-width:190px;max-width:260px;padding:10px 18px;background:var(--pine-d)}
+  .stx-apex.cos-card .meta{opacity:.95}
   .ptree ul.vert{display:block;position:relative;padding:14px 0 0 0}
   .ptree ul.vert::before{content:"";position:absolute;left:13px;top:-14px;bottom:0;border-left:2px solid var(--line)}
   .ptree ul.vert>li{display:block;position:relative;padding:0 0 0 32px;margin-top:9px}
@@ -272,8 +282,8 @@ function renderCrumbs(){const c=document.getElementById('crumbs');c.innerHTML=''
 
 function fan(apexHTML,items){const single=items.length<=1;
   return '<div class="stx-fan"><div class="stx-apex">'+apexHTML+'</div>'+
-   (items.length?'<div class="fan-drop"></div><div class="stx-fan-grid'+(single?' single':'')+'">'+items.map(h=>'<div class="item">'+h+'</div>').join('')+'</div>':'')+'</div>';}
-function fanChain(chain,items){let h='<div class="stx-fan">';chain.forEach((p,i)=>{if(i>0)h+='<div class="chain-link"></div>';h+='<div class="stx-apex">'+apexPerson(p)+'</div>';});h+=items.length?('<div class="fan-drop"></div><div class="stx-fan-grid'+(items.length<=1?' single':'')+'">'+items.map(x=>'<div class="item">'+x+'</div>').join('')+'</div>'):'';return h+'</div>';}
+   (items.length?'<div class="fan-drop"></div><div class="stx-fan-grid one-row'+(single?' single':'')+'">'+items.map(h=>'<div class="item">'+h+'</div>').join('')+'</div>':'')+'</div>';}
+function fanChain(chain,items){let h='<div class="stx-fan">';chain.forEach((p,i)=>{if(i>0)h+='<div class="chain-link"></div>';h+='<div class="stx-apex">'+apexPerson(p)+'</div>';});h+=items.length?('<div class="fan-drop"></div><div class="stx-fan-grid one-row'+(items.length<=1?' single':'')+'">'+items.map(x=>'<div class="item">'+x+'</div>').join('')+'</div>'):'';return h+'</div>';}
 function navcard(title,ctx,cnt,onclick,search){
   return '<div class="stx-navcard" data-search="'+esc(search)+'" onclick="'+onclick+'">'+
     '<div class="ttl">'+esc(title)+'</div>'+(ctx?'<div class="ctx">'+esc(ctx)+'</div>':'')+
@@ -304,10 +314,18 @@ function viewCompany(){
     .concat(DATA.locations.map(loc=>{const on=ACTIVE.has(loc);return '<div class="stx-stat'+(on?'':' off')+'"><div class="num">'+locCount(loc)+'</div><div class="lbl">'+esc(loc)+'</div></div>';})).join('');
   const cards=DATA.functions.filter(f=>funcVis(f)>0).map(f=>{const nD=f.departments.filter(d=>deptVis(d)>0).length;
     return navcard(f.name,'','<b>'+funcVis(f)+'</b> people \u00b7 '+nD+' dept'+(nD===1?'':'s'),"go('"+f.name.replace(/'/g,"\\'")+"')",f.name.toLowerCase());});
-  let h='<div class="stx-fan company-fan"><div class="stx-apex"><div class="role">'+nmlink(DATA.ceo.name,DATA.ceo.url)+'</div><div class="meta">'+esc(DATA.ceo.title)+'</div></div>';
   const cos=DATA.chiefOfStaff;
-  if(cos&&ACTIVE.has(cos.loc))h+='<div class="chain-link"></div><div class="stx-apex"><div class="role">'+nmlink(cos.name,cos.url)+'</div><div class="meta">'+esc(cos.role)+'</div></div>';
-  if(cards.length)h+='<div class="fan-drop"></div><div class="stx-fan-grid one-row'+(cards.length<=1?' single':'')+'">'+cards.map(c=>'<div class="item">'+c+'</div>').join('')+'</div>';
+  const showCos=!!(cos&&ACTIVE.has(cos.loc));
+  const cosCard=cos?('<div class="stx-apex cos-card"><div class="role">'+nmlink(cos.name,cos.url)+'</div><div class="meta">'+esc(cos.role)+'</div></div>'):'';
+  let h='<div class="stx-fan company-fan"><div class="stx-apex"><div class="role">'+nmlink(DATA.ceo.name,DATA.ceo.url)+'</div><div class="meta">'+esc(DATA.ceo.title)+'</div></div>';
+  if(cards.length){
+    h+= showCos
+      ? '<div class="cos-region"><div class="cos-branch"><span class="cos-arm"></span>'+cosCard+'</div></div>'
+      : '<div class="fan-drop"></div>';
+    h+='<div class="stx-fan-grid one-row'+(cards.length<=1?' single':'')+'">'+cards.map(c=>'<div class="item">'+c+'</div>').join('')+'</div>';
+  } else if(showCos){
+    h+='<div class="chain-link"></div>'+cosCard;
+  }
   h+='</div>';
   return '<div class="stx-stats">'+stats+'</div>'+h;}
 
